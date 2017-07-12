@@ -1,0 +1,29 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+
+    //Getting Property List
+    SqlCommand command = new SqlCommand("SELECT id, address FROM dbo.property;", connection);
+    SqlDataReader reader = command.ExecuteReader();
+    Dictionary<int, string> properties = new Dictionary<int, string>();
+    while (reader.Read())
+    {
+        properties.Add(Convert.ToInt32(reader["id"]), Convert.ToString(reader["address"]));
+    }
+    reader.Close();
+}
+<div class="col-lg-2 col-md-2 col-sm-3">
+    <div class="list-group table-of-contents">
+        @{
+            foreach (var id in properties.Keys)
+            {
+                <a class="list-group-item" href="~/property.cshtml?id=@id">@properties[id]</a>
+            }
+        }
+    </div>
+</div>

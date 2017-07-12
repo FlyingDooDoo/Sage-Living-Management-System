@@ -1,0 +1,256 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+
+    //Getting Property information
+    string address = "";
+    string city = "";
+    string province = "";
+    string postal = "";
+    string parking = "";
+    Dictionary<int, string> units = new Dictionary<int, string>();
+    if (Request["id"] != null)
+    {
+        if (Request["action"] != null)
+        {
+            if (Request["action"] == "add_unit")
+            {
+                command = new SqlCommand("INSERT INTO dbo.unit (unit_number,owner,notes,property_id) VALUES(@unit_number,@owner,@notes,@property_id)", connection);
+                command.Parameters.AddWithValue("@unit_number", Request["add_unit_name"]);
+                command.Parameters.AddWithValue("@owner", Request["add_unit_owner"]);
+                command.Parameters.AddWithValue("@notes", Request["add_unit_note"]);
+                command.Parameters.AddWithValue("@property_id", Request["id"]);
+                reader = command.ExecuteReader();
+                reader.Close();
+            }
+            if (Request["action"] == "edit_property")
+            {
+                command = new SqlCommand("UPDATE dbo.property SET address = @address, city = @city, province = @province, postal = @postal, parking = @parking WHERE id = @id", connection);
+                command.Parameters.AddWithValue("@address", Request["edit_property_address"]);
+                command.Parameters.AddWithValue("@city", Request["edit_property_city"]);
+                command.Parameters.AddWithValue("@province", Request["edit_property_province"]);
+                command.Parameters.AddWithValue("@postal", Request["edit_property_postal_code"]);
+                command.Parameters.AddWithValue("@parking", Request["edit_property_parking"]);
+                command.Parameters.AddWithValue("@id", Request["id"]);
+                reader = command.ExecuteReader();
+                reader.Close();
+            }
+        }
+        //Get property info
+        command = new SqlCommand("SELECT * FROM dbo.property WHERE id = @_id", connection);
+        command.Parameters.AddWithValue("@_id", Request["id"]);
+        reader = command.ExecuteReader();
+        reader.Read();
+        address = Convert.ToString(reader["address"]);
+        city = Convert.ToString(reader["city"]);
+        province = Convert.ToString(reader["province"]);
+        postal = Convert.ToString(reader["postal"]);
+        parking = Convert.ToString(reader["parking"]);
+        reader.Close();
+
+        //Get unit list associating with property
+        command = new SqlCommand(@"SELECT u.id, u.unit_number 
+            FROM dbo.unit u 
+            INNER JOIN dbo.property p 
+                ON p.id = u.property_id 
+            WHERE p.id = @_id;",connection);
+        command.Parameters.AddWithValue("@_id", Request["id"]);
+        reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            units.Add(Convert.ToInt32(reader[0]), Convert.ToString(reader[1]));
+        }
+        reader.Close();
+    }
+    connection.Close();
+}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Sage Leasing Manager</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="wrapper">
+
+        <!-- Navigation -->
+        @RenderPage("~/include/nav.cshtml")
+
+        <div id="page-wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    @RenderPage("~/include/property_sidenav.cshtml")
+                    @if (Request["id"] != null)
+                    {
+                        <div class="col-lg-8 col-md-8 col-sm-9">
+                            <h1>@address</h1>
+                            <br>
+                            <br>
+                            <form class="form-horizontal">
+                                <fieldset>
+                                    <legend>Information</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Address</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_property_address" value="@address">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">City</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_property_city" value="@city">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Province</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_property_province" value="@province">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Postal Code</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_property_postal_code" value="@postal">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Parking Spaces</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_property_parking" value="@parking">
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="action" value="edit_property" />
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="reset" class="btn btn-default">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal">
+                                <fieldset>
+                                    <legend>Units</legend>
+                                    <div class="form-group">
+                                        <div class="col-lg-12">
+                                            <table class="table table-striped table-hover ">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Unit #/name</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var unit in units.Keys)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <a href="~/unit.cshtml?id=@unit">@units[unit]</a>
+                                                            </td>
+                                                            <td>
+                                                                <a href="~/unit.cshtml?action=delete&id=@unit">delete</a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="button" id="add_unit_toggle" class="btn btn-primary" onclick="addUnit(this);">Add new units</button>
+                                        </div>
+                                    </div>
+
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal" method="post" action="~/property.cshtml" hidden>
+                                <fieldset>
+                                    <legend>Add New Unit</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Unit #/name</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="add_unit_name">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">owner</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="add_unit_owner">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Additional Notes</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="add_unit_note">
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="action" value="add_unit" />
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary">Add new units</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                    }
+                    
+                </div>
+                <!-- /.row -->
+            </div>
+            <!-- /.container-fluid -->
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <script>
+        function addUnit(butt) {
+            $("form:hidden").show();
+            $("#add_unit_toggle").hide();
+        }
+    </script>
+</body>
+
+</html>
+

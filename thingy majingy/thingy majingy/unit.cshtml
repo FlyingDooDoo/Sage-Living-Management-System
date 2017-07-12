@@ -1,0 +1,192 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+    //Getting Unit information
+    string number = "";
+    string owner = "";
+    string notes = "";
+    string property = "";
+    Dictionary<int, string> units = new Dictionary<int, string>();
+    Dictionary<int, string> rooms = new Dictionary<int, string>();
+    if (Request["id"] != null)
+    {
+        //Get property info
+        command = new SqlCommand("SELECT u.unit_number, u.owner, u.notes, p.address FROM dbo.unit u INNER JOIN dbo.property p ON u.property_id = p.id WHERE u.id = @_id", connection);
+        command.Parameters.AddWithValue("@_id", Request["id"]);
+        reader = command.ExecuteReader();
+        reader.Read();
+        number = Convert.ToString(reader[0]);
+        owner = Convert.ToString(reader[1]);
+        notes = Convert.ToString(reader[2]);
+        property = Convert.ToString(reader[3]);
+        reader.Close();
+
+        /*
+        //Get unit list associating with property
+        command = new SqlCommand(@"SELECT u.id, u.name
+            FROM dbo.unit u
+            INNER JOIN dbo.property p
+                ON p.id = u.property_id
+            WHERE p.id = @_id;", connection);
+        command.Parameters.AddWithValue("@_id", Request["id"]);
+        reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            units.Add(Convert.ToInt32(reader[0]), Convert.ToString(reader[1]));
+        }
+        reader.Close();
+        */
+
+        command = new SqlCommand("Select r.id, r.name FROM room r INNER JOIN unit u ON r.unit_id = u.id WHERE u.id = @id",connection);
+        command.Parameters.AddWithValue("@id", Request["id"]);
+        reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            rooms.Add(Convert.ToInt32(reader[0]),reader[1].ToString());
+        }
+    }
+    connection.Close();
+}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Sage Leasing Manager</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="wrapper">
+
+        <!-- Navigation -->
+        @RenderPage("~/include/nav.cshtml")
+
+        <div id="page-wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    @RenderPage("~/include/property_sidenav.cshtml")
+                    @if (Request["id"] != null)
+                    {
+                        <div class="col-lg-8 col-md-8 col-sm-9">
+                            <h1>Unit @number</h1>
+                            <br>
+                            <br>
+                            <form class="form-horizontal" id="unit_info_form">
+                                <fieldset>
+                                    <legend>Information</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Unit</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" value="@number">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Property</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" value="@property" disabled>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Owner</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" value="@owner">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Notes</label>
+                                        <div class="col-lg-10">
+                                            <textarea form="user_info_form" class="form-control" value="@notes">@notes</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="reset" class="btn btn-default">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal">
+                                <fieldset>
+                                    <legend>Rooms</legend>
+                                    <div class="form-group">
+                                        <div class="col-lg-10">
+                                            <table class="table table-striped table-hover ">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Room #</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var room in rooms.Keys)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <a href="~/units.cshtml?id=@room">@rooms[room]</a>
+                                                            </td>
+                                                            <td>
+                                                                <a href="~/units.cshtml?action=delete&id=@room">delete</a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary">Add new units</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                    }
+
+                </div>
+                <!-- /.row -->
+            </div>
+            <!-- /.container-fluid -->
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+</body>
+
+</html>
