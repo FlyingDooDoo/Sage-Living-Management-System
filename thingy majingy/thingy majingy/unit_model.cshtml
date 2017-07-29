@@ -1,0 +1,47 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    //Establish Database Connection
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+    if (Request["action"] != null)
+    {
+        //Add new Unit
+        if (Request["action"] == "add")
+        {
+            command = new SqlCommand("INSERT INTO dbo.Unit (name,property_id) VALUES(@name,@property_id)", connection);
+            command.Parameters.AddWithValue("@name", Request["name"]);
+            command.Parameters.AddWithValue("@property_id", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/property.cshtml?id=" + Request["id"]);
+        }
+
+
+        //Edit Unit Parameters
+        if (Request["action"] == "edit")
+        {
+            command = new SqlCommand("UPDATE dbo.Unit SET name = @name WHERE id = @id", connection);
+            command.Parameters.AddWithValue("@name", Request["name"]);
+            command.Parameters.AddWithValue("@id", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/unit.cshtml?id=" + Request["id"]);
+        }
+
+        //Delete Unit
+        if (Request["action"] == "delete")
+        {
+            command = new SqlCommand("DELETE FROM dbo.unit WHERE id = @id", connection);
+            command.Parameters.AddWithValue("@id", Request["unit_id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/property.cshtml?id=" + Request["id"]);
+        }
+    }
+}

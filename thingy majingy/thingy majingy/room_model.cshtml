@@ -1,0 +1,36 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    //Establish Database Connection
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+    if (Request["action"] != null)
+    {
+        //Add New Room
+        if (Request["action"] == "add")
+        {
+            command = new SqlCommand("INSERT INTO dbo.Room (name,unit_id) VALUES(@name,@unit_id)", connection);
+            command.Parameters.AddWithValue("@name", Request["name"]);
+            command.Parameters.AddWithValue("@unit_id", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/unit.cshtml?id=" + Request["id"]);
+        }
+
+
+        //Delete Room
+        if (Request["action"] == "delete")
+        {
+            command = new SqlCommand("DELETE FROM dbo.room WHERE id = @id", connection);
+            command.Parameters.AddWithValue("@id", Request["room_id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/unit.cshtml?id=" + Request["id"]);
+        }
+    }
+}

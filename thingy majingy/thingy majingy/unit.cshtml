@@ -3,54 +3,50 @@
 @using System.Data.SqlClient;
 @using System.Diagnostics;
 @{
+    //Establishing Database connection
     var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
     SqlConnection connection = new SqlConnection(connection_string);
     connection.Open();
     SqlCommand command;
     SqlDataReader reader;
-    //Getting Unit information
+
+    //Unit Parameter
     string number = "";
-    string owner = "";
-    string notes = "";
     string property = "";
-    Dictionary<int, string> units = new Dictionary<int, string>();
+
+    //Room List
     Dictionary<int, string> rooms = new Dictionary<int, string>();
+    Dictionary<int, string> lease_groups = new Dictionary<int, string>();
     if (Request["id"] != null)
     {
-        //Get property info
-        command = new SqlCommand("SELECT u.unit_number, u.owner, u.notes, p.address FROM dbo.unit u INNER JOIN dbo.property p ON u.property_id = p.id WHERE u.id = @_id", connection);
+        //GET Unit Parameter
+        command = new SqlCommand("SELECT u.name, p.address FROM dbo.Unit u INNER JOIN dbo.Property p ON u.property_id = p.id WHERE u.id = @_id", connection);
         command.Parameters.AddWithValue("@_id", Request["id"]);
         reader = command.ExecuteReader();
         reader.Read();
         number = Convert.ToString(reader[0]);
-        owner = Convert.ToString(reader[1]);
-        notes = Convert.ToString(reader[2]);
-        property = Convert.ToString(reader[3]);
+        property = Convert.ToString(reader[1]);
         reader.Close();
 
-        /*
-        //Get unit list associating with property
-        command = new SqlCommand(@"SELECT u.id, u.name
-            FROM dbo.unit u
-            INNER JOIN dbo.property p
-                ON p.id = u.property_id
-            WHERE p.id = @_id;", connection);
-        command.Parameters.AddWithValue("@_id", Request["id"]);
-        reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            units.Add(Convert.ToInt32(reader[0]), Convert.ToString(reader[1]));
-        }
-        reader.Close();
-        */
-
-        command = new SqlCommand("Select r.id, r.name FROM room r INNER JOIN unit u ON r.unit_id = u.id WHERE u.id = @id",connection);
+        //GET Corresponding Rooms
+        command = new SqlCommand("Select r.id, r.name FROM room r INNER JOIN unit u ON r.unit_id = u.id WHERE u.id = @id", connection);
         command.Parameters.AddWithValue("@id", Request["id"]);
         reader = command.ExecuteReader();
         while (reader.Read())
         {
-            rooms.Add(Convert.ToInt32(reader[0]),reader[1].ToString());
+            rooms.Add(Convert.ToInt32(reader[0]), reader[1].ToString());
         }
+        reader.Close();
+
+        //GET Corresponding Lease Groups
+        command = new SqlCommand("SELECT lg.id, lg.name FROM Lease_Group lg INNER JOIN Unit u ON lg.unit_id = u.id WHERE u.id = @id", connection);
+        command.Parameters.AddWithValue("@id", Request["id"]);
+        reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            lease_groups.Add(Convert.ToInt32(reader[0]), reader[1].ToString());
+        }
+        reader.Close();
     }
     connection.Close();
 }
@@ -99,13 +95,13 @@
                             <h1>Unit @number</h1>
                             <br>
                             <br>
-                            <form class="form-horizontal" id="unit_info_form">
+                            <form class="form-horizontal" id="unit_info_form" action="~/unit_model.cshtml">
                                 <fieldset>
                                     <legend>Information</legend>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Unit</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" value="@number">
+                                            <input type="text" class="form-control" name="name" value="@number" readonly>
                                         </div>
                                     </div>
                                     <div class="form-group">
@@ -114,27 +110,16 @@
                                             <input type="text" class="form-control" value="@property" disabled>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Owner</label>
-                                        <div class="col-lg-10">
-                                            <input type="text" class="form-control" value="@owner">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Notes</label>
-                                        <div class="col-lg-10">
-                                            <textarea form="user_info_form" class="form-control" value="@notes">@notes</textarea>
-                                        </div>
-                                    </div>
+                                    <input type="hidden" name="id" value="@Request["id"]" />
                                     <div class="form-group">
                                         <div class="col-lg-10 col-lg-offset-2">
                                             <button type="reset" class="btn btn-default">Cancel</button>
-                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                            <button type="submit" class="btn btn-primary" name="action" value="edit">Submit</button>
                                         </div>
                                     </div>
                                 </fieldset>
                             </form>
-                            <form class="form-horizontal">
+                            <form class="form-horizontal"  id="add_room_toggle">
                                 <fieldset>
                                     <legend>Rooms</legend>
                                     <div class="form-group">
@@ -151,10 +136,10 @@
                                                     {
                                                         <tr>
                                                             <td>
-                                                                <a href="~/units.cshtml?id=@room">@rooms[room]</a>
+                                                                <a href="~/room.cshtml?id=@room">@rooms[room]</a>
                                                             </td>
                                                             <td>
-                                                                <a href="~/units.cshtml?action=delete&id=@room">delete</a>
+                                                                <a href="~/room_model.cshtml?action=delete&room_id=@room&id=@Request["id"]">delete</a>
                                                             </td>
                                                         </tr>
                                                     }
@@ -162,24 +147,102 @@
                                             </table>
                                         </div>
                                     </div>
-
                                     <div class="form-group">
                                         <div class="col-lg-10 col-lg-offset-2">
-                                            <button type="submit" class="btn btn-primary">Add new units</button>
+                                            <button type="button" class="btn btn-primary" onclick="addRoom(this);">Add new Rooms</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal" id="add_room" method="post" action="~/room_model.cshtml" hidden>
+                                <fieldset>
+                                    <legend>Add New Room</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Room #/name</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="name">
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary" name="action" value="add">Add new room</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal"  id="add_lease_group_toggle">
+                                <fieldset>
+                                    <legend>Lease Group</legend>
+                                    <div class="form-group">
+                                        <div class="col-lg-10">
+                                            <table class="table table-striped table-hover ">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Lease Group</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var lease_group in lease_groups.Keys)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <a href="~/room.cshtml?id=@lease_group">@lease_groups[lease_group]</a>
+                                                            </td>
+                                                            <td>
+                                                                <a href="~/unit.cshtml?action=delete&room_id=@lease_group&id=@Request["id"]">delete</a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="button" class="btn btn-primary" onclick="addLeaseGroup(this);">Add new lease group</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal" id="add_lease_group" method="post" action="~/unit.cshtml" hidden>
+                                <fieldset>
+                                    <legend>Add New Lease Group</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Lease Group Name</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="name">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Gender Restrictions</label>
+                                        <input type="radio" name="gender_res" value="male" />Male
+                                        <input type="radio" name="gender_res" value="female" />Female
+                                        <input type="radio" name="gender_res" checked value="false" />N/A
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Appliances</label>
+                                        <input type="checkbox" name="hydro" value="1"/>Hydro
+                                        <input type="checkbox" name="water" value="1"/>Water
+                                        <input type="checkbox" name="gas" value="1"/>Gas
+                                    </div>
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary" name="action" value="add">Add new room</button>
                                         </div>
                                     </div>
                                 </fieldset>
                             </form>
                         </div>
                     }
-
                 </div>
                 <!-- /.row -->
             </div>
             <!-- /.container-fluid -->
         </div>
         <!-- /#page-wrapper -->
-
     </div>
     <!-- /#wrapper -->
     <!-- jQuery -->
@@ -187,6 +250,17 @@
 
     <!-- Bootstrap Core JavaScript -->
     <script src="js/bootstrap.min.js"></script>
+
+    <script>
+        function addRoom(butt) {
+            $("#add_room").slideToggle();
+            $("#add_room_toggle").slideToggle();
+        }
+        function addLeaseGroup(butt) {
+            $("#add_lease_group").slideToggle();
+            $("#add_lease_group_toggle").slideToggle();
+        }
+    </script>
 </body>
 
 </html>

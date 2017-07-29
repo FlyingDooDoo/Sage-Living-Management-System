@@ -204,6 +204,9 @@
     <Content Include="include\nav.cshtml" />
     <Content Include="property.cshtml" />
     <Content Include="include\property_sidenav.cshtml" />
+    <Content Include="include\database_setup.cshtml" />
+    <Content Include="property_model.cshtml" />
+    <Content Include="room_model.cshtml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="js\bootstrap.js" />
     <Content Include="js\bootstrap.min.js" />
@@ -286,6 +289,7 @@
     <Content Include="packages.config" />
     <Content Include="Scripts\jquery-1.10.2.min.map" />
     <Content Include="unit.cshtml" />
+    <Content Include="unit_model.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

@@ -3,48 +3,26 @@
 @using System.Data.SqlClient;
 @using System.Diagnostics;
 @{
+    //Establish Database Connection
     var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
     SqlConnection connection = new SqlConnection(connection_string);
     connection.Open();
     SqlCommand command;
     SqlDataReader reader;
 
-    //Getting Property information
+    //Property Parameter
     string address = "";
     string city = "";
     string province = "";
     string postal = "";
     string parking = "";
+
+    //Unit List
     Dictionary<int, string> units = new Dictionary<int, string>();
     if (Request["id"] != null)
     {
-        if (Request["action"] != null)
-        {
-            if (Request["action"] == "add_unit")
-            {
-                command = new SqlCommand("INSERT INTO dbo.unit (unit_number,owner,notes,property_id) VALUES(@unit_number,@owner,@notes,@property_id)", connection);
-                command.Parameters.AddWithValue("@unit_number", Request["add_unit_name"]);
-                command.Parameters.AddWithValue("@owner", Request["add_unit_owner"]);
-                command.Parameters.AddWithValue("@notes", Request["add_unit_note"]);
-                command.Parameters.AddWithValue("@property_id", Request["id"]);
-                reader = command.ExecuteReader();
-                reader.Close();
-            }
-            if (Request["action"] == "edit_property")
-            {
-                command = new SqlCommand("UPDATE dbo.property SET address = @address, city = @city, province = @province, postal = @postal, parking = @parking WHERE id = @id", connection);
-                command.Parameters.AddWithValue("@address", Request["edit_property_address"]);
-                command.Parameters.AddWithValue("@city", Request["edit_property_city"]);
-                command.Parameters.AddWithValue("@province", Request["edit_property_province"]);
-                command.Parameters.AddWithValue("@postal", Request["edit_property_postal_code"]);
-                command.Parameters.AddWithValue("@parking", Request["edit_property_parking"]);
-                command.Parameters.AddWithValue("@id", Request["id"]);
-                reader = command.ExecuteReader();
-                reader.Close();
-            }
-        }
-        //Get property info
-        command = new SqlCommand("SELECT * FROM dbo.property WHERE id = @_id", connection);
+        //GET Property Parameter
+        command = new SqlCommand("SELECT * FROM dbo.Property WHERE id = @_id", connection);
         command.Parameters.AddWithValue("@_id", Request["id"]);
         reader = command.ExecuteReader();
         reader.Read();
@@ -55,10 +33,10 @@
         parking = Convert.ToString(reader["parking"]);
         reader.Close();
 
-        //Get unit list associating with property
-        command = new SqlCommand(@"SELECT u.id, u.unit_number 
-            FROM dbo.unit u 
-            INNER JOIN dbo.property p 
+        //GET Corresponding Units
+        command = new SqlCommand(@"SELECT u.id, u.name
+            FROM dbo.Unit u 
+            INNER JOIN dbo.Property p 
                 ON p.id = u.property_id 
             WHERE p.id = @_id;",connection);
         command.Parameters.AddWithValue("@_id", Request["id"]);
@@ -102,10 +80,8 @@
 <body>
 
     <div id="wrapper">
-
         <!-- Navigation -->
         @RenderPage("~/include/nav.cshtml")
-
         <div id="page-wrapper">
             <div class="container-fluid">
                 <div class="row">
@@ -116,50 +92,49 @@
                             <h1>@address</h1>
                             <br>
                             <br>
-                            <form class="form-horizontal">
+                            <form class="form-horizontal" action="~/property_model.cshtml">
                                 <fieldset>
                                     <legend>Information</legend>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Address</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="edit_property_address" value="@address">
+                                            <input type="text" class="form-control" name="address" value="@address">
                                         </div>
                                     </div>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">City</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="edit_property_city" value="@city">
+                                            <input type="text" class="form-control" name="city" value="@city">
                                         </div>
                                     </div>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Province</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="edit_property_province" value="@province">
+                                            <input type="text" class="form-control" name="province" value="@province">
                                         </div>
                                     </div>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Postal Code</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="edit_property_postal_code" value="@postal">
+                                            <input type="text" class="form-control" name="postal_code" value="@postal">
                                         </div>
                                     </div>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Parking Spaces</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="edit_property_parking" value="@parking">
+                                            <input type="text" class="form-control" name="parking" value="@parking">
                                         </div>
                                     </div>
-                                    <input type="hidden" name="action" value="edit_property" />
                                     <input type="hidden" name="id" value="@Request["id"]" />
                                     <div class="form-group">
                                         <div class="col-lg-10 col-lg-offset-2">
                                             <button type="reset" class="btn btn-default">Cancel</button>
-                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                            <button type="submit" class="btn btn-primary" name="action" value="edit">Submit</button>
                                         </div>
                                     </div>
                                 </fieldset>
                             </form>
-                            <form class="form-horizontal">
+                            <form class="form-horizontal" id="add_unit_toggle">
                                 <fieldset>
                                     <legend>Units</legend>
                                     <div class="form-group">
@@ -179,7 +154,7 @@
                                                                 <a href="~/unit.cshtml?id=@unit">@units[unit]</a>
                                                             </td>
                                                             <td>
-                                                                <a href="~/unit.cshtml?action=delete&id=@unit">delete</a>
+                                                                <a href="~/unit_model.cshtml?action=delete&unit_id=@unit&id=@Request["id"]">delete</a>
                                                             </td>
                                                         </tr>
                                                     }
@@ -190,45 +165,31 @@
 
                                     <div class="form-group">
                                         <div class="col-lg-10 col-lg-offset-2">
-                                            <button type="button" id="add_unit_toggle" class="btn btn-primary" onclick="addUnit(this);">Add new units</button>
+                                            <button type="button" class="btn btn-primary" onclick="addUnit(this);">Add new units</button>
                                         </div>
                                     </div>
 
                                 </fieldset>
                             </form>
-                            <form class="form-horizontal" method="post" action="~/property.cshtml" hidden>
+                            <form class="form-horizontal" method="post" action="~/unit_model.cshtml" hidden>
                                 <fieldset>
                                     <legend>Add New Unit</legend>
                                     <div class="form-group">
                                         <label class="col-lg-2 control-label">Unit #/name</label>
                                         <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="add_unit_name">
+                                            <input type="text" class="form-control" name="name">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">owner</label>
-                                        <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="add_unit_owner">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Additional Notes</label>
-                                        <div class="col-lg-10">
-                                            <input type="text" class="form-control" name="add_unit_note">
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="action" value="add_unit" />
                                     <input type="hidden" name="id" value="@Request["id"]" />
                                     <div class="form-group">
                                         <div class="col-lg-10 col-lg-offset-2">
-                                            <button type="submit" class="btn btn-primary">Add new units</button>
+                                            <button type="submit" class="btn btn-primary" name="action" value="add">Add new units</button>
                                         </div>
                                     </div>
                                 </fieldset>
                             </form>
                         </div>
                     }
-                    
                 </div>
                 <!-- /.row -->
             </div>
@@ -246,8 +207,8 @@
 
     <script>
         function addUnit(butt) {
-            $("form:hidden").show();
-            $("#add_unit_toggle").hide();
+            $("form:hidden").slideToggle();
+            $("#add_unit_toggle").slideToggle();
         }
     </script>
 </body>

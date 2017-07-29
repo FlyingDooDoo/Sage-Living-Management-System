@@ -1,0 +1,44 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    //Establish Database Connection
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+
+    if (Request["action"] != null)
+    {
+        //Edit Property Parameters
+        if (Request["action"] == "edit")
+        {
+            command = new SqlCommand("UPDATE dbo.property SET address = @address, city = @city, province = @province, postal = @postal, parking = @parking WHERE id = @id", connection);
+            command.Parameters.AddWithValue("@address", Request["address"]);
+            command.Parameters.AddWithValue("@city", Request["city"]);
+            command.Parameters.AddWithValue("@province", Request["province"]);
+            command.Parameters.AddWithValue("@postal", Request["postal_code"]);
+            command.Parameters.AddWithValue("@parking", Request["parking"]);
+            command.Parameters.AddWithValue("@id", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+        }
+        Response.Redirect("~/property.cshtml?id=" + Request["id"]);
+    }
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title></title>
+</head>
+<body>
+    <div>
+    
+    </div>
+</body>
+</html>

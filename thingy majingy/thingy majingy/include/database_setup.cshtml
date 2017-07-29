@@ -1,0 +1,186 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+
+@{
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+
+    //Property Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Property'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Property](
+            [id]        INT             NOT NULL    IDENTITY(1,1),
+            [address]   NVARCHAR (20)   NOT NULL,
+            [city]      NVARCHAR (20)   NOT NULL,
+            [province]  NVARCHAR (20)   NOT NULL,
+            [postal]    NVARCHAR (20)   NOT NULL,
+            [parking]   INT   NULL,
+            PRIMARY KEY ([id] ASC)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Unit Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Unit'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Unit](
+            [id]            INT             NOT NULL    IDENTITY(1,1),
+            [name]          NVARCHAR (20)   NOT NULL,
+            [property_id]   INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (property_id) REFERENCES Property(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Room Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Room'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Room](
+            [id]            INT             NOT NULL    IDENTITY(1,1),
+            [name]          NVARCHAR (20)   NOT NULL,
+            [unit_id]       INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (unit_id) REFERENCES Unit(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Lease Group Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Lease_Group'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Lease_Group](
+            [id]            INT             NOT NULL    IDENTITY(1,1),
+            [name]          NVARCHAR (20)   NOT NULL,
+            [gender_res]    NVARCHAR (20)   NOT NULL,
+            [hydro]         NVARCHAR (20)   NOT NULL,
+            [water]         NVARCHAR (20)   NOT NULL,
+            [gas]           NVARCHAR (20)   NOT NULL,
+            [unit_id]       INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (unit_id) REFERENCES Unit(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Tenant Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Tenant'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Tenant](
+            [id]            INT             NOT NULL    IDENTITY(1,1),
+            [first_name]    NVARCHAR (20)   NOT NULL,
+            [last_name]     NVARCHAR (20)   NOT NULL,
+            [phone]         NVARCHAR (20)   NOT NULL,
+            [email]         NVARCHAR (20)   NOT NULL,
+            [address]       NVARCHAR (20)   NOT NULL,
+            [city]          NVARCHAR (20)   NOT NULL,
+            [province]      NVARCHAR (20)   NOT NULL,
+            [country]       NVARCHAR (20)   NOT NULL,
+            [postal]        NVARCHAR (20)   NOT NULL,
+            PRIMARY KEY ([id] ASC),
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Lease Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Lease'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Lease](
+            id                  INT             NOT NULL    IDENTITY(1,1),
+            [name]              NVARCHAR (20)   NOT NULL,
+            [start_date]        DATE            NOT NULL,
+            [end_date]          DATE            NOT NULL,
+            [rent]              MONEY           NOT NULL,
+            [hydro]             NVARCHAR (20)   NOT NULL,
+            [tenant_id]         INT             NOT NULL,
+            [room_id]           INT             NOT NULL,
+            [lease_group_id]    INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (tenant_id)         REFERENCES Tenant(id),
+            FOREIGN KEY (room_id)           REFERENCES Room(id),
+            FOREIGN KEY (lease_group_id)    REFERENCES Lease_Group(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    //Appliance Table
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Appliance'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Appliance](
+            [id]                INT             NOT NULL    IDENTITY(1,1),
+            [type]              NVARCHAR (20)   NOT NULL,
+            [lease_group_id]    INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (lease_group_id) REFERENCES Lease_Group(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+    command = new SqlCommand(
+        @"IF NOT EXISTS (
+            SELECT *
+            FROM sysobjects 
+            WHERE name = 'Furniture'
+                AND xtype = 'U'
+        )
+        CREATE TABLE [dbo].[Furniture](
+            id                  INT             NOT NULL    IDENTITY(1,1),
+            [type]              NVARCHAR (20)   NOT NULL,
+            [quantity]          INT             NOT NULL,
+            [unit_id]           INT             NOT NULL,
+            PRIMARY KEY ([id] ASC),
+            FOREIGN KEY (unit_id) REFERENCES Unit(id)
+        )", connection
+    );
+    reader = command.ExecuteReader();
+    reader.Close();
+
+}
+

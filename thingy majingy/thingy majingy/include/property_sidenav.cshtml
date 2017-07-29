@@ -8,7 +8,7 @@
     connection.Open();
 
     //Getting Property List
-    SqlCommand command = new SqlCommand("SELECT id, address FROM dbo.property;", connection);
+    SqlCommand command = new SqlCommand("SELECT id, address FROM dbo.Property;", connection);
     SqlDataReader reader = command.ExecuteReader();
     Dictionary<int, string> properties = new Dictionary<int, string>();
     while (reader.Read())
