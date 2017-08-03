@@ -1,0 +1,242 @@
+﻿@using System;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.Diagnostics;
+@{
+    var connection_string = @"Data Source = (LocalDB)\MSSQLLocalDB; AttachDbFilename = " + Server.MapPath("~/App_Data/lease.mdf") + "; Integrated Security = True";
+    SqlConnection connection = new SqlConnection(connection_string);
+    connection.Open();
+    SqlCommand command;
+    SqlDataReader reader;
+
+    //Getting Property information
+    string room_name = "";
+
+    Dictionary<int, string> rooms = new Dictionary<int, string>();
+    Dictionary<int, string> furnitures = new Dictionary<int, string>();
+    Dictionary<int, int> quantities = new Dictionary<int, int>();
+
+    if (Request["id"] != null)
+    {
+        if (Request["action"] == "add_furniture")
+        {
+            Debug.WriteLine("Ye:" + Request["add_furniture_name"]);
+            command = new SqlCommand("INSERT INTO dbo.furniture (name, qty, room_id) VALUES(@name, @qty, @roomID)", connection);
+            command.Parameters.AddWithValue("@name", Request["add_furniture_name"]);
+            command.Parameters.AddWithValue("@qty", Request["add_furniture_qty"]);
+            command.Parameters.AddWithValue("@roomID", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+        }
+        else if (Request["action"] == "delete_furniture")
+        {
+            command = new SqlCommand("DELETE FROM dbo.furniture WHERE id=@id", connection);
+            command.Parameters.AddWithValue("@id", Request["furniture_id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+            Response.Redirect("~/room.cshtml?id="+Request["id"]);
+        }
+        else if (Request["action"] == "edit_room")
+        {
+            command = new SqlCommand("UPDATE dbo.room SET name=@name WHERE id=@id", connection);
+            command.Parameters.AddWithValue("@name", Request["edit_room_name"]);
+            command.Parameters.AddWithValue("@id", Request["id"]);
+            reader = command.ExecuteReader();
+            reader.Close();
+        }
+    }
+    //Get room information
+    command = new SqlCommand("SELECT * FROM dbo.room WHERE id = @id", connection);
+    command.Parameters.AddWithValue("@id", Request["id"]);
+    reader = command.ExecuteReader();
+    reader.Read();
+    room_name = Convert.ToString(reader["name"]);
+    reader.Close();
+
+    //Get room furniture
+
+    command = new SqlCommand("SELECT * FROM dbo.furniture WHERE room_id=@id", connection);
+    command.Parameters.AddWithValue("@id", Request["id"]);
+    reader = command.ExecuteReader();
+
+    while (reader.Read())
+    {
+        furnitures.Add(Convert.ToInt32(reader["id"]), Convert.ToString(reader["name"]));
+        quantities.Add(Convert.ToInt32(reader["id"]), Convert.ToInt32(reader["qty"]));
+    }
+    reader.Close();
+    /*Get furniture list associating with room
+    command = new SqlCommand(@"SELECT f.id, f.name 
+            FROM dbo.furniture f 
+            INNER JOIN dbo.room r 
+                ON r.id = f.room_id
+            WHERE f.id = @_id;", connection);
+    command.Parameters.AddWithValue("@_id", Request["id"]);
+    reader = command.ExecuteReader();
+    while (reader.Read())
+    {
+        furnitures.Add(Convert.ToInt32(reader[0]), Convert.ToString(reader[1]));
+    }
+    reader.Close();
+    */
+    command = new SqlCommand("SELECT * FROM dbo.room WHERE id = @_id", connection);
+    command.Parameters.AddWithValue("@_id", Request["id"]);
+    reader = command.ExecuteReader();
+    reader.Read();
+    room_name = Convert.ToString(reader["name"]);
+    reader.Close();
+
+    connection.Close();
+}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Sage Leasing Manager</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="wrapper">
+
+        <!-- Navigation -->
+        @RenderPage("~/include/nav.cshtml")
+
+        <div id="page-wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    @RenderPage("~/include/property_sidenav.cshtml")
+                    @if (Request["id"] != null)
+                    {
+                        <div class="col-lg-8 col-md-8 col-sm-9">
+                            <h1>@room_name</h1>
+                            <br>
+                            <br>
+                            <form class="form-horizontal" method="post" action="~/room.cshtml">
+                                <fieldset>
+                                    <legend>Information</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Name</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="edit_room_name" value="@room_name">
+                                        </div>
+                                    </div>                                                                  
+                                    <input type="hidden" name="action" value="edit_room" />
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary">Update</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal" method="post" action="~/room.cshtml">
+                                <fieldset>
+                                    <legend>Furniture</legend>
+                                    <div class="form-group">
+                                        <div class="col-lg-12">
+                                            <table class="table table-striped table-hover ">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Name</th>
+                                                        <th>Qty.</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var furniture in furnitures.Keys)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                               @furnitures[furniture]
+                                                            </td>                                                            
+                                                            <td>@quantities[furniture]</td>
+                                                            <td>
+                                                                <a href="~/room.cshtml?id=@Request["id"]&action=delete_furniture&id=@Request["id"]&furniture_id=@furniture">delete</a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="button" id="add_unit_toggle" class="btn btn-primary" onclick="addFurniture(this);">Add Furniture</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <form class="form-horizontal" method="post" action="~/room.cshtml" hidden>
+                                <fieldset>
+                                    <legend>Add New Furniture</legend>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Name</label>
+                                        <div class="col-lg-10">
+                                            <input type="text" class="form-control" name="add_furniture_name">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Qty</label>
+                                        <div class="col-lg-10">
+                                            <input type="number" min="1" value="1" class="form-control" name="add_furniture_qty">
+                                        </div>
+                                    </div>                                  
+                                    <input type="hidden" name="action" value="add_furniture" />
+                                    <input type="hidden" name="id" value="@Request["id"]" />
+                                    <div class="form-group">
+                                        <div class="col-lg-10 col-lg-offset-2">
+                                            <button type="submit" class="btn btn-primary">Add</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                    }
+
+                </div>
+                <!-- /.row -->
+            </div>
+            <!-- /.container-fluid -->
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <script>
+        function addFurniture(butt) {
+            $("form:hidden").show();
+            $("#add_unit_toggle").hide();
+        }
+    </script>
+</body>
+
+</html>
+

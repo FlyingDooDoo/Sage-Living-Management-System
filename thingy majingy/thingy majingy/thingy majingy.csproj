@@ -204,6 +204,7 @@
     <Content Include="include\nav.cshtml" />
     <Content Include="property.cshtml" />
     <Content Include="include\property_sidenav.cshtml" />
+    <Content Include="room.cshtml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="js\bootstrap.js" />
     <Content Include="js\bootstrap.min.js" />
