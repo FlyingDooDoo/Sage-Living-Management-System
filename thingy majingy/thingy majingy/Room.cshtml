@@ -65,20 +65,7 @@
         quantities.Add(Convert.ToInt32(reader["id"]), Convert.ToInt32(reader["qty"]));
     }
     reader.Close();
-    /*Get furniture list associating with room
-    command = new SqlCommand(@"SELECT f.id, f.name 
-            FROM dbo.furniture f 
-            INNER JOIN dbo.room r 
-                ON r.id = f.room_id
-            WHERE f.id = @_id;", connection);
-    command.Parameters.AddWithValue("@_id", Request["id"]);
-    reader = command.ExecuteReader();
-    while (reader.Read())
-    {
-        furnitures.Add(Convert.ToInt32(reader[0]), Convert.ToString(reader[1]));
-    }
-    reader.Close();
-    */
+
     command = new SqlCommand("SELECT * FROM dbo.room WHERE id = @_id", connection);
     command.Parameters.AddWithValue("@_id", Request["id"]);
     reader = command.ExecuteReader();
